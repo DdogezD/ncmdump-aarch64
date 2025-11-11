@@ -50,6 +50,54 @@ jobs:
           name: ncmdump-linux
           path: ${{github.workspace}}/build/ncmdump
 
+  job_linux_arm64:
+    name: Linux Build (ARM64)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Install Cross Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-aarch64-linux-gnu cmake zlib1g-dev
+
+      - name: Build TagLib v2.1.1 for ARM64
+        run: |
+          wget https://github.com/taglib/taglib/releases/download/v2.1.1/taglib-2.1.1.tar.gz
+          tar -xzf taglib-2.1.1.tar.gz
+          cd taglib-2.1.1
+          cmake -DCMAKE_INSTALL_PREFIX=/usr/aarch64-linux-gnu \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                -DCMAKE_BUILD_TYPE=Release .
+          make -j$(nproc)
+          sudo make install
+
+      - name: Configure CMake (ARM64)
+        run: |
+          cmake -B build-arm64 -S . \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+                -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+                -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+                -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+                -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (ARM64)
+        run: cmake --build build-arm64 --config Release
+
+      - name: Upload Linux Artifact (ARM64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ncmdump-linux-arm64
+          path: build-arm64/ncmdump
+
   # ----------------------------------------------------------------------
   # 2. macOS Build
   # ----------------------------------------------------------------------
